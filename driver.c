@@ -129,7 +129,7 @@ static int rnddev_open(struct inode *inode, struct file *file)
 	return 0;
 }
 
-static int rnddev_release(struct inode *, struct file *)
+static int rnddev_release(struct inode *inode, struct file *file)
 {
 	Device_Open--;
 	module_put(THIS_MODULE);
@@ -162,16 +162,17 @@ static ssize_t rnddev_read(struct file *filp, char *buffer, size_t length,
 
 	res = gf_elem_to_uint8(x);
 
-	if (copy_to_user(buffer, &res, sizeof(res))) {
-		printk(KERN_ALERT "COPY ERROR\n");
-	}
 #endif
 
 	if (*offset != 0)
 		return 0;
 
 	printk(KERN_INFO "COPYING\n");
-	put_user(res, buffer);
+
+	if (copy_to_user(buffer, &res, sizeof(res))) {
+		printk(KERN_ALERT "COPY ERROR\n");
+	}
+
 	*offset += 1;
 	return 1;
 }
