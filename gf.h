@@ -58,6 +58,9 @@ gf_elem_t gf_multiply(gf_elem_t a, gf_elem_t b);
 /* return a / b in GF */
 gf_elem_t gf_div(gf_elem_t a, gf_elem_t b);
 
+/* a += b in GF */
+void gf_vsum(gf_elem_t *a, gf_elem_t b);
+
 /* free up memory allocated for GF element */
 void gf_elem_free(gf_elem_t el);
 

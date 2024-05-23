@@ -171,6 +171,13 @@ gf_elem_t gf_div(gf_elem_t a, gf_elem_t b)
 	return res;
 }
 
+void gf_vsum(gf_elem_t *a, gf_elem_t b)
+{
+	gf_elem_t old = *a;
+	*a = gf_sum(old, b);
+	gf_elem_free(old);
+}
+
 void gf_elem_free(gf_elem_t el)
 {
 	if (el != NULL)
