@@ -75,3 +75,5 @@ uint16_t gf_elem_to_uint16(gf_elem_t x);
 /* convert uint32_t to element of GF2^32 and vice versa */
 gf_elem_t uint32_to_gf_elem(uint32_t x);
 uint32_t gf_elem_to_uint32(gf_elem_t x);
+
+gf_elem_t gf_elem_copy(gf_elem_t x);

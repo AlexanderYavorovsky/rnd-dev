@@ -215,8 +215,9 @@ uint8_t gf_elem_to_uint8(gf_elem_t x)
 {
 	uint8_t res = 0;
 	uint8_t mul = 1;
+	uint8_t i;
 
-	for (uint8_t i = 0; i <= x->poly->deg; i++) {
+	for (i = 0; i <= x->poly->deg; i++) {
 		res += x->poly->coef[i] * mul;
 		mul <<= 1;
 	}
@@ -244,8 +245,9 @@ uint16_t gf_elem_to_uint16(gf_elem_t x)
 {
 	uint16_t res = 0;
 	uint16_t mul = 1;
+	uint8_t i;
 
-	for (uint8_t i = 0; i <= x->poly->deg; i++) {
+	for (i = 0; i <= x->poly->deg; i++) {
 		res += x->poly->coef[i] * mul;
 		mul <<= 1;
 	}
@@ -273,11 +275,26 @@ uint32_t gf_elem_to_uint32(gf_elem_t x)
 {
 	uint32_t res = 0;
 	uint32_t mul = 1;
+	uint8_t i;
 
-	for (uint8_t i = 0; i <= x->poly->deg; i++) {
+	for (i = 0; i <= x->poly->deg; i++) {
 		res += x->poly->coef[i] * mul;
 		mul <<= 1;
 	}
+
+	return res;
+}
+
+gf_elem_t gf_elem_copy(gf_elem_t x)
+{
+	gf_elem_t res;
+
+	res = kmalloc(sizeof(x), GFP_KERNEL);
+	if (res == NULL)
+		return NULL;
+
+	res->poly = poly_copy(x->poly);
+	res->ff = x->ff;
 
 	return res;
 }

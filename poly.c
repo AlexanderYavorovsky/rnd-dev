@@ -86,6 +86,7 @@ int poly_iszero(c_poly_t f)
 poly_t poly_neg(c_poly_t f)
 {
 	poly_t res;
+	uint8_t i;
 
 	if (f == NULL)
 		return NULL;
@@ -99,7 +100,7 @@ poly_t poly_neg(c_poly_t f)
 
 	res->deg = f->deg;
 	res->p = f->p;
-	for (uint8_t i = 0; i <= f->deg; i++)
+	for (i = 0; i <= f->deg; i++)
 		res->coef[i] = (f->p - f->coef[i]) % f->p;
 
 	poly_normalize(res);
@@ -111,6 +112,7 @@ poly_t poly_sum(c_poly_t a, c_poly_t b)
 {
 	poly_t res;
 	uint8_t maxdeg;
+	uint8_t i;
 
 	if (a->p != b->p)
 		return NULL;
@@ -126,7 +128,7 @@ poly_t poly_sum(c_poly_t a, c_poly_t b)
 	res->deg = maxdeg;
 	res->p = a->p;
 
-	for (uint8_t i = 0; i <= maxdeg; i++) {
+	for (i = 0; i <= maxdeg; i++) {
 		if (i <= a->deg)
 			res->coef[i] += a->coef[i];
 		if (i <= b->deg)
@@ -141,12 +143,13 @@ poly_t poly_sum(c_poly_t a, c_poly_t b)
 
 poly_t poly_subtract(c_poly_t a, c_poly_t b)
 {
+	poly_t b_neg, res;
+
 	if (a->p != b->p)
 		return NULL;
 
-	poly_t b_neg = poly_neg(b);
-	poly_t res = poly_sum(a, b_neg);
-
+	b_neg = poly_neg(b);
+	res = poly_sum(a, b_neg);
 	poly_free(b_neg);
 
 	return res;
@@ -155,6 +158,7 @@ poly_t poly_subtract(c_poly_t a, c_poly_t b)
 poly_t poly_multiply(c_poly_t a, c_poly_t b)
 {
 	poly_t res;
+	uint8_t i, j;
 
 	if (a->p != b->p)
 		return NULL;
@@ -170,8 +174,8 @@ poly_t poly_multiply(c_poly_t a, c_poly_t b)
 	res->deg = a->deg + b->deg;
 	res->p = a->p;
 
-	for (uint8_t i = 0; i <= a->deg; i++)
-		for (uint8_t j = 0; j <= b->deg; j++)
+	for (i = 0; i <= a->deg; i++)
+		for (j = 0; j <= b->deg; j++)
 			res->coef[i + j] =
 				(a->coef[i] * b->coef[j] + res->coef[i + j]) %
 				a->p;
@@ -185,6 +189,7 @@ poly_t poly_mod(c_poly_t a, c_poly_t b)
 {
 	poly_t res;
 	uint8_t m, n, gn_inv;
+	uint8_t i, j;
 
 	if (a->p != b->p || poly_iszero(b))
 		return NULL;
@@ -199,9 +204,9 @@ poly_t poly_mod(c_poly_t a, c_poly_t b)
 	gn_inv = p_inv(b->coef[n], a->p); /* inverse for n-th b coefficient */
 
 	/* i, j are offsets from res leading (m-th) coefficient */
-	for (uint8_t i = 0; i <= m - n; i++) {
+	for (i = 0; i <= m - n; i++) {
 		uint8_t q = (res->coef[m - i] * gn_inv) % a->p;
-		for (uint8_t j = i; j <= n + i; j++) {
+		for (j = i; j <= n + i; j++) {
 			uint8_t subtrahend = (q * b->coef[n - j + i]) % a->p;
 			res->coef[m - j] =
 				p_diff(res->coef[m - j], subtrahend, a->p);
