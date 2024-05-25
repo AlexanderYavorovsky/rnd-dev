@@ -296,7 +296,7 @@ gf_elem_t gf_elem_copy(gf_elem_t x)
 {
 	gf_elem_t res;
 
-	res = kmalloc(sizeof(x), GFP_KERNEL);
+	res = kmalloc(sizeof(*x), GFP_KERNEL);
 	if (res == NULL)
 		return NULL;
 
