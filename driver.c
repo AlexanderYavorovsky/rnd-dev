@@ -51,11 +51,10 @@ MODULE_PARM_DESC(crs_init_elems, "An array of CRS elements x_0..x_{k-1}");
 module_param(crs_c, byte, 0);
 MODULE_PARM_DESC(crs_c, "CRS constant");
 
+
 static int __init rnddev_init(void)
 {
 	size_t i;
-
-	printk(KERN_INFO "Rnd dev start.\n");
 
 	if (crs_len == 0) {
 		printk(KERN_ALERT
@@ -142,10 +141,8 @@ static int rnddev_release(struct inode *inode, struct file *file)
 static ssize_t rnddev_read(struct file *filp, char *buffer, size_t length,
 			   loff_t *offset)
 {
-	/* give 1 rnd byte */
-	uint8_t res = 4;
-
-#if 0
+	uint8_t res = 0;
+	uint8_t p, y, t;
 	gf_elem_t x = gf_elem_copy(gf_crs_constant);
 	gf_elem_t tmp;
 	gf_elem_t prod;
@@ -154,15 +151,22 @@ static ssize_t rnddev_read(struct file *filp, char *buffer, size_t length,
 
 	for (i = 0; i < crs_len; i++) {
 		prod = gf_multiply(gf_crs_coeffs[i], gf_crs_elems[i]);
+
+		p = gf_elem_to_uint8(prod);
+		y = gf_elem_to_uint8(x);
+		printk(KERN_INFO "sum%lu: p=%u x=%u\n", i, p, y);
+
+		gf_vsum(&x, prod);
 		tmp = gf_sum(x, prod);
-		gf_elem_free(x);
+		t = gf_elem_to_uint8(tmp);
+
+		printk(KERN_INFO "sum%lu pass: tmp=%u\n", i, t);
 		gf_elem_free(prod);
-		x = tmp;
+		gf_elem_free(tmp);
 	}
 
 	res = gf_elem_to_uint8(x);
-
-#endif
+	gf_elem_free(x);
 
 	if (*offset != 0)
 		return 0;
@@ -174,6 +178,7 @@ static ssize_t rnddev_read(struct file *filp, char *buffer, size_t length,
 	}
 
 	*offset += 1;
+
 	return 1;
 }
 
