@@ -144,7 +144,6 @@ static ssize_t rnddev_read(struct file *filp, char *buffer, size_t length,
 	uint8_t res = 0;
 	uint8_t p, y, t;
 	gf_elem_t x = gf_elem_copy(gf_crs_constant);
-	gf_elem_t tmp;
 	gf_elem_t prod;
 	size_t i;
 
@@ -157,16 +156,24 @@ static ssize_t rnddev_read(struct file *filp, char *buffer, size_t length,
 		printk(KERN_INFO "sum%lu: p=%u x=%u\n", i, p, y);
 
 		gf_vsum(&x, prod);
-		tmp = gf_sum(x, prod);
-		t = gf_elem_to_uint8(tmp);
 
-		printk(KERN_INFO "sum%lu pass: tmp=%u\n", i, t);
+		t = gf_elem_to_uint8(x);
+		printk(KERN_INFO "sum%lu pass: x=%u\n", i, t);
+
 		gf_elem_free(prod);
-		gf_elem_free(tmp);
 	}
 
-	res = gf_elem_to_uint8(x);
-	gf_elem_free(x);
+
+	/* step */
+	gf_elem_free(gf_crs_elems[0]);
+	for (i = 0; i < crs_len - 1; i++) {
+		gf_crs_elems[i] = gf_crs_elems[i + 1];
+	}
+	gf_crs_elems[crs_len - 1] = x;
+	x = NULL;
+
+	res = gf_elem_to_uint8(gf_crs_elems[crs_len - 1]);
+	printk(KERN_INFO "res: %u\n", res);
 
 	if (*offset != 0)
 		return 0;
