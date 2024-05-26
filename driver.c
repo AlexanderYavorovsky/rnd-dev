@@ -63,8 +63,6 @@ MODULE_PARM_DESC(crs_c, "CRS constant");
 
 static int __init rnddev_init(void)
 {
-	size_t i;
-
 	if (crs_len == 0) {
 		printk(KERN_ALERT
 		       "EINVAL: crs_len is zero! Cannot make a sequence. Abort.\n");
