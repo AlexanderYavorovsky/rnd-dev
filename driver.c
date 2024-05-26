@@ -15,10 +15,14 @@ MODULE_DESCRIPTION("Random byte generator character device");
 static int __init rnddev_init(void);
 static void __exit rnddev_exit(void);
 static void init_crs(void);
-static int rnddev_open(struct inode *, struct file *);
-static int rnddev_release(struct inode *, struct file *);
-static ssize_t rnddev_read(struct file *, char *, size_t, loff_t *);
-static ssize_t rnddev_write(struct file *, const char *, size_t, loff_t *);
+static int rnddev_open(struct inode *inode, struct file *file);
+static int rnddev_release(struct inode *inode, struct file *file);
+static ssize_t rnddev_read(struct file *filp, char *buffer, size_t length,
+			   loff_t *offset);
+static ssize_t rnddev_write(struct file *filp, const char *buff, size_t length,
+			    loff_t *offset);
+static void debug_print(void);
+static void make_step(gf_elem_t *x);
 
 #define DEVICE_NAME "rnddev"
 #define MAX_LEN 30
@@ -51,7 +55,6 @@ MODULE_PARM_DESC(crs_init_elems, "An array of CRS elements x_0..x_{k-1}");
 module_param(crs_c, byte, 0);
 MODULE_PARM_DESC(crs_c, "CRS constant");
 
-
 static int __init rnddev_init(void)
 {
 	size_t i;
@@ -73,15 +76,7 @@ static int __init rnddev_init(void)
 	printk(KERN_INFO "Create chrdev using: mknod /dev/%s c %d 0\n",
 	       DEVICE_NAME, Major);
 
-	/* debug info */
-	printk(KERN_INFO "crs_len: %lu\n", crs_len);
-	printk(KERN_INFO "crs_c: %d\n", crs_c);
-	for (i = 0; i < crs_len; i++)
-		printk(KERN_INFO "crs_coeffs[%lu] = %d\n", i, crs_coeffs[i]);
-	for (i = 0; i < crs_len; i++)
-		printk(KERN_INFO "crs_init_elems[%lu] = %d\n", i,
-		       crs_init_elems[i]);
-
+	debug_print();
 	init_crs();
 
 	return 0;
@@ -123,7 +118,7 @@ static int rnddev_open(struct inode *inode, struct file *file)
 	Device_Open++;
 	try_module_get(THIS_MODULE);
 
-	printk(KERN_INFO "OPENED\n");
+	printk(KERN_INFO "Rnddev opened\n");
 
 	return 0;
 }
@@ -133,7 +128,7 @@ static int rnddev_release(struct inode *inode, struct file *file)
 	Device_Open--;
 	module_put(THIS_MODULE);
 
-	printk(KERN_INFO "released\n");
+	printk(KERN_INFO "Rnddev released\n");
 
 	return 0;
 }
@@ -141,48 +136,37 @@ static int rnddev_release(struct inode *inode, struct file *file)
 static ssize_t rnddev_read(struct file *filp, char *buffer, size_t length,
 			   loff_t *offset)
 {
-	uint8_t res = 0;
-	uint8_t p, y, t;
+	uint8_t res = 0, u_prod, u_x;
 	gf_elem_t x = gf_elem_copy(gf_crs_constant);
 	gf_elem_t prod;
 	size_t i;
 
-
 	for (i = 0; i < crs_len; i++) {
 		prod = gf_multiply(gf_crs_coeffs[i], gf_crs_elems[i]);
 
-		p = gf_elem_to_uint8(prod);
-		y = gf_elem_to_uint8(x);
-		printk(KERN_INFO "sum%lu: p=%u x=%u\n", i, p, y);
+		/* debug info */
+		u_prod = gf_elem_to_uint8(prod);
+		u_x = gf_elem_to_uint8(x);
+		printk(KERN_INFO "sum%lu: prod=%u x=%u\n", i, u_prod, u_x);
 
 		gf_vsum(&x, prod);
 
-		t = gf_elem_to_uint8(x);
-		printk(KERN_INFO "sum%lu pass: x=%u\n", i, t);
+		/* debug info */
+		u_x = gf_elem_to_uint8(x);
+		printk(KERN_INFO "sum%lu pass: x=%u\n", i, u_x);
 
 		gf_elem_free(prod);
 	}
 
+	make_step(&x);
 
-	/* step */
-	gf_elem_free(gf_crs_elems[0]);
-	for (i = 0; i < crs_len - 1; i++) {
-		gf_crs_elems[i] = gf_crs_elems[i + 1];
-	}
-	gf_crs_elems[crs_len - 1] = x;
-	x = NULL;
-
+	/* debug info */
 	res = gf_elem_to_uint8(gf_crs_elems[crs_len - 1]);
 	printk(KERN_INFO "res: %u\n", res);
+	printk(KERN_INFO "Copying to user\n");
 
-	if (*offset != 0)
-		return 0;
-
-	printk(KERN_INFO "COPYING\n");
-
-	if (copy_to_user(buffer, &res, sizeof(res))) {
+	if (copy_to_user(buffer, &res, sizeof(res)))
 		printk(KERN_ALERT "COPY ERROR\n");
-	}
 
 	*offset += 1;
 
@@ -194,6 +178,33 @@ static ssize_t rnddev_write(struct file *filp, const char *buff, size_t length,
 {
 	printk(KERN_ALERT "Write is not supported.\n");
 	return -EINVAL;
+}
+
+static void debug_print(void)
+{
+	size_t i;
+
+	printk(KERN_INFO "crs_len: %lu\n", crs_len);
+	printk(KERN_INFO "crs_c: %d\n", crs_c);
+
+	for (i = 0; i < crs_len; i++)
+		printk(KERN_INFO "crs_coeffs[%lu] = %d\n", i, crs_coeffs[i]);
+	for (i = 0; i < crs_len; i++)
+		printk(KERN_INFO "crs_init_elems[%lu] = %d\n", i,
+		       crs_init_elems[i]);
+}
+
+static void make_step(gf_elem_t *x)
+{
+	size_t i;
+
+	gf_elem_free(gf_crs_elems[0]);
+
+	for (i = 0; i < crs_len - 1; i++)
+		gf_crs_elems[i] = gf_crs_elems[i + 1];
+
+	gf_crs_elems[crs_len - 1] = *x;
+	*x = NULL;
 }
 
 module_init(rnddev_init);
