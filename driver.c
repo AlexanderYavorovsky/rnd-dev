@@ -1,3 +1,9 @@
+/*
+ * Kernel module character device.
+ * Yavorovsky Alexander, 26.05.2024.
+ * email: aleyavoff@gmail.com
+ */
+
 #include <linux/fs.h>
 #include <linux/init.h>
 #include <linux/kernel.h>
@@ -43,7 +49,7 @@ static gf_elem_t gf_crs_coeffs[MAX_LEN];
 static gf_elem_t gf_crs_elems[MAX_LEN];
 static gf_elem_t gf_crs_constant;
 
-module_param(crs_len, ulong, 0); /* todo: 0? */
+module_param(crs_len, ulong, 0);
 MODULE_PARM_DESC(crs_len, "CRS length");
 
 module_param_array(crs_coeffs, byte, NULL, 0);
@@ -141,6 +147,7 @@ static ssize_t rnddev_read(struct file *filp, char *buffer, size_t length,
 	gf_elem_t prod;
 	size_t i;
 
+	/* calculate next element of sequence (x) */
 	for (i = 0; i < crs_len; i++) {
 		prod = gf_multiply(gf_crs_coeffs[i], gf_crs_elems[i]);
 
@@ -194,6 +201,7 @@ static void debug_print(void)
 		       crs_init_elems[i]);
 }
 
+/* make a step in sequence: x_i = x_{i+1} */
 static void make_step(gf_elem_t *x)
 {
 	size_t i;
